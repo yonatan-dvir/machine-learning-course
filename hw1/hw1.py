@@ -78,8 +78,8 @@ def compute_cost(X, y, theta):
     
     J = 0  # We use J for the cost.
     m = X.shape[0]  # Number of instances
-    # Calculate J with the cost function
-    for i in range(1, m):
+    # Calculate J with the cost function formula
+    for i in range(1, m+1):
         h_theta_x_i = theta[0] + theta[1]*X[i-1][1]
         y_i = y[i-1]
         J += (h_theta_x_i - y_i) ** 2
@@ -108,15 +108,22 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     - J_history: the loss value for every iteration.
     """
     
-    theta = theta.copy() # optional: theta outside the function will not change
-    J_history = [] # Use a python list to save the cost value in every iteration
-    ###########################################################################
-    # TODO: Implement the gradient descent optimization algorithm.            #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    theta = theta.copy()  # optional: theta outside the function will not change
+    J_history = []  # Use a python list to save the cost value in every iteration
+    m = X.shape[0]  # Number of instances
+
+    for iteration in range(num_iters):
+        for j in range(len(theta)):
+            sigma = 0
+            for i in range(1, m+1):
+                h_theta_x_i = theta[0] + theta[1] * X[i - 1][1]
+                y_i = y[i - 1]
+                sigma += (h_theta_x_i - y_i) * X[i-1][j]
+            x = alpha*sigma  # alpha times the partial derivative of the error function with respect theta j
+            x = x/m
+            theta[j] -= x
+        J_history.append((h_theta_x_i - y_i)**2/(2*m))
+
     return theta, J_history
 
 def compute_pinv(X, y):
@@ -252,3 +259,4 @@ def create_square_features(df):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return df_poly
+
