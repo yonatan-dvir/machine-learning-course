@@ -79,11 +79,12 @@ def compute_cost(X, y, theta):
     J = 0  # We use J for the cost.
     m = X.shape[0]  # Number of instances
     # Calculate J with the cost function formula
-    for i in range(1, m+1):
-        h_theta_x_i = theta[0] + theta[1]*X[i-1][1]
-        y_i = y[i-1]
-        J += (h_theta_x_i - y_i) ** 2
-    J /= 2*m
+    for i in range(1, m+1): # For every instance
+        prediction = np.dot(theta, X[i-1]) # theta dot X(i)
+        actual_value = y[i-1] # y(i)
+        error = prediction - actual_value
+        J += error ** 2
+    J /= 2*m # Average all m instances to get the cost
 
     return J
 
@@ -109,20 +110,24 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     """
     
     theta = theta.copy()  # optional: theta outside the function will not change
-    J_history = []  # Use a python list to save the cost value in every iteration
+    J_history = []  # Use a python list to save the loss value in every iteration
     m = X.shape[0]  # Number of instances
+    temp_theta_values = [0] * len(theta) # Use a python list to do simultaneous thetas values updated
 
     for iteration in range(num_iters):
         for j in range(len(theta)):
             sigma = 0
-            for i in range(1, m+1):
-                h_theta_x_i = theta[0] + theta[1] * X[i - 1][1]
-                y_i = y[i - 1]
-                sigma += (h_theta_x_i - y_i) * X[i-1][j]
-            x = alpha*sigma  # alpha times the partial derivative of the error function with respect theta j
-            x = x/m
-            theta[j] -= x
-        J_history.append((h_theta_x_i - y_i)**2/(2*m))
+
+            for i in range(1, m+1): # For every instance
+                prediction = np.dot(theta, X[i-1]) # theta dot X(i)
+                actual_value = y[i-1] # y(i)
+                error = prediction - actual_value
+                sigma += error * X[i-1][j] # Relevant feature value
+            sigma /= m
+            sigma *= alpha  # alpha times the partial derivative of the error function with respect theta j
+            temp_theta_values[j] = theta[j] - sigma
+        theta = temp_theta_values # Set the new theta values
+        J_history.append(compute_cost(X,y,theta))
 
     return theta, J_history
 
