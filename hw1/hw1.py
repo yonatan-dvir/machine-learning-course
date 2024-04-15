@@ -149,13 +149,10 @@ def compute_pinv(X, y):
     """
     
     pinv_theta = []
-    ###########################################################################
-    # TODO: Implement the pseudoinverse algorithm.                            #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    X_transposed = np.transpose(X)
+    X_transposed_dot_X = np.linalg.inv(np.dot(X_transposed, X))
+    pinv_X = np.dot(X_transposed_dot_X, X_transposed)
+    pinv_theta = np.dot(pinv_X, y)
     return pinv_theta
 
 def efficient_gradient_descent(X, y, theta, alpha, num_iters):
@@ -179,13 +176,26 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     
     theta = theta.copy() # optional: theta outside the function will not change
     J_history = [] # Use a python list to save the cost value in every iteration
-    ###########################################################################
-    # TODO: Implement the efficient gradient descent optimization algorithm.  #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    m = X.shape[0]  # Number of instances
+    temp_theta_values = [0] * len(theta) # Use a python list to do simultaneous thetas values updated
+
+    for iteration in range(num_iters):
+        for j in range(len(theta)):
+            sigma = 0
+
+            for i in range(1, m+1): # For every instance
+                prediction = np.dot(theta, X[i-1]) # theta dot X(i)
+                actual_value = y[i-1] # y(i)
+                error = prediction - actual_value
+                sigma += error * X[i-1][j] # Relevant feature value
+            sigma /= m
+            sigma *= alpha  # alpha times the partial derivative of the error function with respect theta j
+            temp_theta_values[j] = theta[j] - sigma
+        theta = temp_theta_values # Set the new theta values
+        J_history.append(compute_cost(X,y,theta))
+        # If the improvement of the loss value is smaller than 1e-8, stop the learning process
+        if iteration > 0 and J_history[iteration - 1] - J_history[iteration] < 1e-8:
+            break
     return theta, J_history
 
 def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
@@ -206,13 +216,12 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     
     alphas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
     alpha_dict = {} # {alpha_value: validation_loss}
-    ###########################################################################
-    # TODO: Implement the function and find the best alpha value.             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    random_theta=np.random.random(size=X_train.shape[1])
+    for alpha in alphas:
+        theta, J_history = efficient_gradient_descent(X_train, y_train, random_theta, alpha, iterations)
+        validation_loss = compute_cost(X_val, y_val, theta)
+        alpha_dict[alpha] = validation_loss
+
     return alpha_dict
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterations):
