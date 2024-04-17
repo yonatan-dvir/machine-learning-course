@@ -272,7 +272,27 @@ def create_square_features(df):
                with appropriate feature names
     """
 
-    df_poly = df.copy()
-    
+     # List to store new columns
+    new_columns = []
+    # Iterate through each column in the original DataFrame
+    for col1 in df.columns:
+        # Compute square feature
+        new_columns.append(df[col1] ** 2)
+
+        # Compute cross-product with other columns
+        for col2 in df.columns:
+            if col1 != col2: # Don't compute cross-product with itself
+                new_columns.append(df[col1] * df[col2])
+
+    # Concatenate all new columns to the original DataFrame
+    df_poly = pd.concat(new_columns, axis=1)
+    # Rename columns with appropriate names
+    column_names = []
+    for col1 in df.columns:
+        column_names.append(col1+'^2')
+        for col2 in df.columns:
+            if col1 != col2:
+                column_names.append(col1 +'*'+col2)
+    df_poly.columns = column_names
     return df_poly
 
