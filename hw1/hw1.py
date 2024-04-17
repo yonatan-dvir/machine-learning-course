@@ -47,20 +47,17 @@ def apply_bias_trick(X):
     Returns:
     - X: Input data with an additional column of ones in the
         zeroth position (m instances over n+1 features).
-    """
-    # set m to be number of X rows (number of instances) and n to be number of X columns (number of features)
-    m = X.shape[0]
+    """    
+    # Create an array of ones of length of X
+    column0 = np.ones(len(X))
 
-    # Create an array of m arrays of 1 in each one of them
-    ones_column = np.ones((m, 1))
-
-    # Reshape X to be the same structure of ones_column, so we can stack the arrays in sequence horizontally
-    X = X.reshape(-1, 1)
-
-    # Set the ones column as the zeroth column of the features (Insert it at the beginning of X)
-    X = np.hstack((ones_column, X))
+    # concatenates the array column0 with the original array X - adds a column of ones to the beginning of the array X.
+    X = np.c_[column0, X]
 
     return X
+
+
+    
 
 def compute_cost(X, y, theta):
     """
@@ -242,14 +239,25 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
     Returns:
     - selected_features: A list of selected top 5 feature indices
     """
+    
     selected_features = []
-    #####c######################################################################
-    # TODO: Implement the function and find the best alpha value.             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    for i in range(5):
+        np.random.seed(42)
+        # create a dict for feature (the column) and its cost
+        best_cost = {}
+        for feature in range(X_train.shape[1]): #  select a feature (column in data set)
+            if feature not in selected_features:
+                selected_features.append(feature)
+                # slicing to select only the columns that are in selected_features
+                theta2 = np.random.random(size=i + 2)
+                idx_train, idx_val = apply_bias_trick(X_train[:, selected_features]), apply_bias_trick(X_val[:, selected_features])
+                theta, cost_hist = efficient_gradient_descent(idx_train,y_train,theta2, best_alpha, iterations)
+                cost = compute_cost(idx_val, y_val, theta)
+                best_cost[feature] = cost
+                selected_features.pop()
+        best_feature = min(best_cost, key=best_cost.get)
+        selected_features.append(best_feature)
+
     return selected_features
 
 def create_square_features(df):
@@ -265,12 +273,6 @@ def create_square_features(df):
     """
 
     df_poly = df.copy()
-    ###########################################################################
-    # TODO: Implement the function to add polynomial features                 #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    
     return df_poly
 
