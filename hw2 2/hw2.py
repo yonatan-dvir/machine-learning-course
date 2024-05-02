@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 ### Chi square table values ###
 # The first key is the degree of freedom 
@@ -73,14 +74,30 @@ def calc_gini(data):
     - gini: The gini impurity value.
     """
     gini = 0.0
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    
+    # k is the number of possible label classes in the dataset
+    k = 2
+
+    instances_number = data.shape[0]
+    p_class = 0
+    sum = 0 
+
+    # Calculate number of p class labels
+    for instance in range(0, instances_number):
+        if (data[instance][-1] == 'p'):
+            p_class += 1
+
+    # Calculate number of e class labels
+    e_class = instances_number - p_class
+
+    if (instances_number == 0):
+        return 1
+    
+    sum += (p_class/instances_number) ** 2 + (e_class/instances_number) ** 2
+    gini = 1 - sum
+
     return gini
+
 
 def calc_entropy(data):
     """
@@ -93,13 +110,28 @@ def calc_entropy(data):
     - entropy: The entropy value.
     """
     entropy = 0.0
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+
+    # k is the number of possible label classes in the dataset
+    k = 2
+
+    instances_number = data.shape[0]
+    p_class = 0
+    sum = 0 
+
+    # Calculate number of p class labels
+    for instance in range(0, instances_number):
+        if (data[instance][-1] == 'p'):
+            p_class += 1
+
+    # Calculate number of e class labels
+    e_class = instances_number - p_class
+
+    if (instances_number == 0):
+        return 0;
+
+    sum += (p_class/instances_number) * math.log2(p_class/instances_number) + (e_class/instances_number) * math.log2(e_class/instances_number)
+    entropy = -1 * sum
+    
     return entropy
 
 class DecisionNode:
