@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 
 ### Chi square table values ###
 # The first key is the degree of freedom 
@@ -73,30 +72,17 @@ def calc_gini(data):
     Returns:
     - gini: The gini impurity value.
     """
-    gini = 0.0
-    
-    # k is the number of possible label classes in the dataset
-    k = 2
-
-    instances_number = data.shape[0]
-    p_class = 0
-    sum = 0 
-
-    # Calculate number of p class labels
-    for instance in range(0, instances_number):
-        if (data[instance][-1] == 'p'):
-            p_class += 1
-
-    # Calculate number of e class labels
-    e_class = instances_number - p_class
-
-    if (instances_number == 0):
-        return 1
-    
-    sum += (p_class/instances_number) ** 2 + (e_class/instances_number) ** 2
-    gini = 1 - sum
-
+    gini = 1.0
+    # cut last column, as it contains the labels
+    labels = data[:, -1]
+    # calculate how many samples each label has
+    label, count = np.unique(labels, return_counts=True)
+    # calculate based on gini function
+    for i in count:
+        p_i = i / len(data)
+        gini -= p_i**2
     return gini
+
 
 
 def calc_entropy(data):
@@ -110,28 +96,14 @@ def calc_entropy(data):
     - entropy: The entropy value.
     """
     entropy = 0.0
-
-    # k is the number of possible label classes in the dataset
-    k = 2
-
-    instances_number = data.shape[0]
-    p_class = 0
-    sum = 0 
-
-    # Calculate number of p class labels
-    for instance in range(0, instances_number):
-        if (data[instance][-1] == 'p'):
-            p_class += 1
-
-    # Calculate number of e class labels
-    e_class = instances_number - p_class
-
-    if (instances_number == 0):
-        return 0;
-
-    sum += (p_class/instances_number) * math.log2(p_class/instances_number) + (e_class/instances_number) * math.log2(e_class/instances_number)
-    entropy = -1 * sum
-    
+    # cut last column, as it contains the labels
+    labels = data[:, -1]
+    # calculate how many samples each label has
+    label, count = np.unique(labels, return_counts=True)
+    # calculate based on entropy function
+    for i in count:
+        p_i = i / len(data)
+        entropy += (-1) * p_i * np.log2(p_i)
     return entropy
 
 class DecisionNode:
@@ -160,28 +132,18 @@ class DecisionNode:
         - pred: the prediction of the node
         """
         pred = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
-        return pred
         
+        return pred
+
+
     def add_child(self, node, val):
         """
         Adds a child node to self.children and updates self.children_values
 
         This function has no return value
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        self.children.append(node)
+        self.children_values.append(val)
         
     def calc_feature_importance(self, n_total_sample):
         """
@@ -193,13 +155,9 @@ class DecisionNode:
         This function has no return value - it stores the feature importance in 
         self.feature_importance
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        prob = len(self.data) / n_total_sample
+        goodness = self.goodness_of_split(self.feature)
+        self.feature_importance = prob * goodness
     
     def goodness_of_split(self, feature):
         """
@@ -213,17 +171,37 @@ class DecisionNode:
         - groups: a dictionary holding the data after splitting 
                   according to the feature values.
         """
+        if self.gain_ratio == 1:
+            self.impurity_func = calc_entropy;
+            
         goodness = 0
         groups = {} # groups[feature_value] = data_subset
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        sum = 0
+        split_info = 0;
+
+        # Calculate the base
+        base = self.impurity_func(self.data)
+       
+        # calculate how many instances for each feature value
+        feature_column = self.data[:, feature]
+        feature_values, values_occurences = np.unique(feature_column, return_counts=True)
+
+        # calculate the sum part of the goodness formula
+        for feature_value, feature_count in zip (feature_values, values_occurences):
+            data_subset = self.data[self.data[:, feature] == feature_value]
+            groups[feature_value] = data_subset
+            sum += feature_count/len(self.data) * self.impurity_func(data_subset)
+            split_info -= feature_count/len(self.data)*np.log2(feature_count/len(self.data))
+        gain = base - sum
+
+        if self.gain_ratio == 1:
+            goodness = gain/split_info
+        else:
+            goodness = gain
+
         return goodness, groups
-    
+
+
     def split(self):
         """
         Splits the current node according to the self.impurity_func. This function finds
@@ -232,13 +210,30 @@ class DecisionNode:
 
         This function has no return value
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        # ensure doesnt increase if at max length
+        if self.depth >= self.max_depth:
+            self.terminal = True
+            return
+
+        best_goodness = 0
+        best_feature_index = None
+        # find the index of the best feature to split by
+        for i in range(len(self.data[0]) - 1 ):
+            curr_goodness = self.goodness_of_split(i)
+            if curr_goodness > best_goodness:
+                best_goodness = curr_goodness
+                best_feature_index = i
+
+        if best_goodness <= 0:
+            self.terminal = True
+            return
+
+        # create and add all children foe the best feature
+        feature_values = np.unique(self.data[:, best_feature_index])
+        for feature in feature_values:
+            data_child = self.data[self.data[:, best_feature_index] == feature]  
+            child = DecisionNode(data=data_child, depth=self.depth+1, chi=self.chi, max_depth=self.max_depth, impurity_func=self.impurity_func)
+            self.add_child(child, feature)
 
                     
 class DecisionTree:
