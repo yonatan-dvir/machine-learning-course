@@ -339,7 +339,7 @@ class DecisionTree:
         return accuracy
         
     def depth(self):
-        return self.root.depth()
+         return self.root.depth
 
 def depth_pruning(X_train, X_validation):
     """
@@ -385,15 +385,14 @@ def chi_pruning(X_train, X_test):
     chi_validation_acc  = []
     depth = []
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    for p_value in [1, 0.5, 0.25, 0.1, 0.05, 0.0001]:
+        tree_entropy_gain_ratio = DecisionTree(data=X_train, impurity_func=calc_entropy, chi=p_value, gain_ratio=True) # entropy and gain ratio
+        tree_entropy_gain_ratio.build_tree()
+        chi_training_acc.append(tree_entropy_gain_ratio.calc_accuracy(X_train))
+        chi_validation_acc.append(tree_entropy_gain_ratio.calc_accuracy(X_test))
+        depth.append(tree_entropy_gain_ratio.depth())
         
-    return chi_training_acc, chi_testing_acc, depth
+    return chi_training_acc, chi_validation_acc, depth
 
 
 def count_nodes(node):
@@ -405,14 +404,17 @@ def count_nodes(node):
  
     Output: the number of node in the tree.
     """
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # base case: If the node is None, return 0
+    if node is None:
+        return 0
+    # include the current node itself
+    n_nodes = 1
+    # recursively count nodes in the children
+    for child in node.children:
+        n_nodes += count_nodes(child)
     return n_nodes
+    
+    
 
 
 
