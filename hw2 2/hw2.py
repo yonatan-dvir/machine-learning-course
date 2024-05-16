@@ -1,5 +1,9 @@
+###### Your ID ######
+# ID1: 211337126
+# ID2: 204908933
+#####################
+
 import numpy as np
-import matplotlib.pyplot as plt
 
 ### Chi square table values ###
 # The first key is the degree of freedom 
