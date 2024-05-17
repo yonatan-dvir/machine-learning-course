@@ -10,35 +10,35 @@ class conditional_independence():
         self.C = {0: 0.5, 1: 0.5}  # P(C=c)
 
         self.X_Y = {
-            (0, 0): None,
-            (0, 1): None,
-            (1, 0): None,
-            (1, 1): None
+            (0, 0): 0.12,
+            (0, 1): 0.16,
+            (1, 0): 0.16,
+            (1, 1): 0.54
         }  # P(X=x, Y=y)
 
         self.X_C = {
-            (0, 0): None,
-            (0, 1): None,
-            (1, 0): None,
-            (1, 1): None
+            (0, 0): 0.15,
+            (0, 1): 0.15,
+            (1, 0): 0.35,
+            (1, 1): 0.35
         }  # P(X=x, C=y)
 
         self.Y_C = {
-            (0, 0): None,
-            (0, 1): None,
-            (1, 0): None,
-            (1, 1): None
+            (0, 0): 0.15,
+            (0, 1): 0.15,
+            (1, 0): 0.35,
+            (1, 1): 0.35
         }  # P(Y=y, C=c)
 
         self.X_Y_C = {
-            (0, 0, 0): None,
-            (0, 0, 1): None,
-            (0, 1, 0): None,
-            (0, 1, 1): None,
-            (1, 0, 0): None,
-            (1, 0, 1): None,
-            (1, 1, 0): None,
-            (1, 1, 1): None,
+            (0, 0, 0): 0.045,
+            (0, 0, 1): 0.045,
+            (0, 1, 0): 0.105,
+            (0, 1, 1): 0.105,
+            (1, 0, 0): 0.105,
+            (1, 0, 1): 0.105,
+            (1, 1, 0): 0.245,
+            (1, 1, 1): 0.245,
         }  # P(X=x, Y=y, C=c)
 
     def is_X_Y_dependent(self):
@@ -48,13 +48,12 @@ class conditional_independence():
         X = self.X
         Y = self.Y
         X_Y = self.X_Y
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        for x in X:
+            for y in Y:
+                if not np.isclose(X_Y[(x, y)], X[x] * Y[y]):
+                    return True
+        return False
+
 
     def is_X_Y_given_C_independent(self):
         """
@@ -66,13 +65,15 @@ class conditional_independence():
         X_C = self.X_C
         Y_C = self.Y_C
         X_Y_C = self.X_Y_C
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        for x in X:
+            for y in Y:
+                for c in C:
+                    x_y_given_c = X_Y_C[(x,y,c)] / C[c]
+                    x_given_c = X_C[(x,c)] / C[c]
+                    y_given_c = Y_C[(y,c)] / C[c]
+                    if not np.isclose(x_y_given_c, x_given_c * y_given_c):
+                        return False
+        return True
 
 def poisson_log_pmf(k, rate):
     """
@@ -81,14 +82,9 @@ def poisson_log_pmf(k, rate):
 
     return the log pmf value for instance k given the rate
     """
-    log_p = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    ##log_p = (rate ** k * np.e ** -rate) / math.factorial(k)
+     
+    log_p = k * np.log(rate) - rate - np.log(np.math.factorial(k))  
     return log_p
 
 def get_poisson_log_likelihoods(samples, rates):
@@ -98,14 +94,12 @@ def get_poisson_log_likelihoods(samples, rates):
 
     return: 1d numpy array, where each value represent that log-likelihood value of rates[i]
     """
-    likelihoods = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    likelihoods = np.zeros(len(rates))
+    for i, rate in enumerate(rates):
+        i_prob = 0
+        for sample in samples:
+            i_prob += poisson_log_pmf(sample,rate)
+        likelihoods[i] = i_prob
     return likelihoods
 
 def possion_iterative_mle(samples, rates):
@@ -115,16 +109,16 @@ def possion_iterative_mle(samples, rates):
 
     return: the rate that maximizes the likelihood 
     """
-    rate = 0.0
+    best_rate = 0.0
+    best_likelihood = -99999999
     likelihoods = get_poisson_log_likelihoods(samples, rates) # might help
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return rate
+    for i, rate in enumerate(rates):
+        if likelihoods[i] > best_likelihood:
+            best_likelihood = likelihoods[i]
+            best_rate = rate
+    
+    return best_rate
+
 
 def possion_analytic_mle(samples):
     """
@@ -133,13 +127,11 @@ def possion_analytic_mle(samples):
     return: the rate that maximizes the likelihood
     """
     mean = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+
+    num_samples = len(samples)
+    sum_samples = sum(samples)
+    mean = sum_samples / num_samples
+
     return mean
 
 def normal_pdf(x, mean, std):
