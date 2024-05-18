@@ -385,21 +385,17 @@ class DiscreteNBClassDistribution():
         - dataset: The dataset as a numpy array.
         - class_value: Compute the relevant parameters only for instances from the given class.
         """
-        
+        self.dataset = dataset
+        self.class_value = class_value
+        last_column = dataset[:, -1]
+        self.class_dataset = dataset[last_column == class_value][:, :-1]
     
     def get_prior(self):
         """
         Returns the prior porbability of the class 
         according to the dataset distribution.
         """
-        prior = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        prior = len(self.class_dataset) / len(self.dataset)
         return prior
     
     def get_instance_likelihood(self, x):
@@ -407,14 +403,18 @@ class DiscreteNBClassDistribution():
         Returns the likelihood of the instance under 
         the class according to the dataset distribution.
         """
-        likelihood = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        likelihood = 1.0
+        for i, value in enumerate(x):
+            # calc all parameters needed
+            n_i = len(self.class_dataset)
+            V_j = len(set(self.class_dataset[:, i]))
+            n_ij = np.count_nonzero(self.class_dataset[:, i] == value)
+            if (np.count_nonzero(self.dataset[:, i] == value) == 0):
+                calc_likelihood = EPSILLON
+            else:
+                calc_likelihood = (n_ij + 1) / (n_i + V_j)
+                
+            likelihood *= calc_likelihood
         return likelihood
         
     def get_instance_posterior(self, x):
@@ -423,14 +423,7 @@ class DiscreteNBClassDistribution():
         under the class according to the dataset distribution.
         * Ignoring p(x)
         """
-        posterior = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        posterior = self.get_instance_likelihood(x) * self.get_prior()
         return posterior
 
 
@@ -445,13 +438,8 @@ class MAPClassifier_DNB():
             - ccd0 : An object contating the relevant parameters and methods for the distribution of class 0.
             - ccd1 : An object contating the relevant parameters and methods for the distribution of class 1.
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        self.ccd0 = ccd0
+        self.ccd1 = ccd1
 
     def predict(self, x):
         """
@@ -462,15 +450,9 @@ class MAPClassifier_DNB():
         Output
             - 0 if the posterior probability of class 0 is higher and 1 otherwise.
         """
-        pred = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
-        return pred
+        if self.ccd0.get_instance_posterior(x) > self.ccd1.get_instance_posterior(x):
+            return 0
+        return 1
 
     def compute_accuracy(self, test_set):
         """
@@ -482,13 +464,15 @@ class MAPClassifier_DNB():
             - Accuracy = #Correctly Classified / #test_set size
         """
         acc = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        correct = 0
+        # check for each instance in test set if the prediction is correct
+        for instance in test_set:
+            instance_class = instance[-1]
+            prediction = self.predict(instance[:-1])
+            if prediction == instance_class:
+                correct += 1
+        # num correct / num of instances checked
+        acc = correct / len(test_set)
         return acc
 
 
