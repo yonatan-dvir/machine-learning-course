@@ -94,8 +94,47 @@ class LogisticRegressionGD(object):
         self.Js = []
         self.thetas = []
 
+    def apply_bias_trick(self, X):
+        """
+
+        Applies the bias trick to the input data.
+
+        Input:
+        - X: Input data (m instances over n features).
+
+        Returns:
+        - X: Input data with an additional column of ones in the
+            zeroth position (m instances over n+1 features).
+
+        """
+        # Create a vector of 1's and connecting it to be the first column (zero column)
+        length_x = len(X)
+        column0 = np.ones(length_x)
+        X = np.c_[column0, X]
+        return X
+
+    def compute_cost(self, X, y ):
+        """
+        Computes the average squared difference between an observation's actual and
+        predicted values for linear regression.
+
+        Input:
+        - X: Input data (m instances over n features).
+        - y: True labels (m instances).
+        - theta: the parameters (weights) of the model being learned.
+
+        Returns:
+        - J: the cost associated with the current set of parameters (single number).
+        """
+
+        J = 0  # We use J for the cost.
+        m = len(y)
+        y_pred = 1.0 / (1.0 + np.exp(-(np.dot(X, self.theta))))  # the Hypothesis function
+        J = -(1/m) * np.sum(np.dot(y.T, np.log(y_pred)) + np.dot((1 - y).T , np.log(1 - y_pred)))  # Cost function
+        return J
+    
     def fit(self, X, y):
-        """=-0978654321 xs
+        """
         Fit training data (the learning phase).
         Update the theta vector in each iteration using gradient descent.
         Store the theta vector in self.thetas.
@@ -113,16 +152,27 @@ class LogisticRegressionGD(object):
           Target values.
 
         """
+        # add a column of 1's to X
+        X = self.apply_bias_trick(X)
         # set random seed
         np.random.seed(self.random_state)
+        # Initialize theta with zeros
+        self.theta = np.zeros(X.shape[1])
 
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        for i in range(self.n_iter):
+            y_pred = 1.0 / (1.0 + np.exp(-(np.dot(X, self.theta))))  # the Hypothesis function
+            gradient = (1 / len(y)) * np.dot(X.T, (y_pred - y))
+            self.theta -= self.eta * gradient # Update theta by learning rate and gradient
+
+            # Compute cost and store it in the history
+            cost = self.compute_cost(X, y)
+            self.Js.append(cost)
+            self.thetas.append(self.theta.copy())
+
+            # Stop the function when the difference between the previous cost and the current is less than eps
+            if len(self.Js) > 1 and abs(self.Js[-2] - self.Js[-1]) < self.eps:
+                break
+
 
     def predict(self, X):
         """
@@ -132,13 +182,10 @@ class LogisticRegressionGD(object):
         X : {array-like}, shape = [n_examples, n_features]
         """
         preds = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        # Add column of 1's for theta0
+        X = self.apply_bias_trick(X)
+        y_pred = 1.0 / (1.0 + np.exp(-(np.dot(X, self.theta))))  # the Hypothesis function
+        preds = [1 if i > 0.5 else 0 for i in y_pred]  # 𝑖𝑓 ℎ𝜃 𝑥 > 0.5 𝑡ℎ𝑒𝑛 1 𝑒𝑙𝑠𝑒 0
         return preds
 
 def cross_validation(X, y, folds, algo, random_state):
