@@ -217,14 +217,36 @@ def cross_validation(X, y, folds, algo, random_state):
     # set random seed
     np.random.seed(random_state)
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # Shuffle the data and creates folds
+    index = np.arange(X.shape[0])
+    np.random.shuffle(index)
+    X = X[index]
+    y = y[index]
+    fold_size = int(X.shape[0] / folds)
+    fold_accuracy = []
+
+    for i in range(folds):
+      # Create training and testing sets for each fold
+        X_train = np.concatenate((X[:i * fold_size], X[(i + 1) * fold_size:]), axis=0)
+        X_test = X[i * fold_size:(i + 1) * fold_size]
+        y_train = np.concatenate((y[:i * fold_size], y[(i + 1) * fold_size:]), axis=0)
+        y_test = y[i * fold_size:(i + 1) * fold_size]
+
+        # Train the model on each fold
+        algo.fit(X_train, y_train)
+
+        # Calculate accuracy for the current fold
+        n_correct = 0
+        for sample, target in zip(X_test, y_test):
+            prediction = algo.predict(sample.reshape(1, -1))[0]  # reshape sample for single prediction
+            if prediction == target:
+                n_correct += 1
+        fold_accuracy.append(n_correct / len(y_test))
+
+    # Calculate aggregated metrics (mean accuracy across all folds)
+    cv_accuracy = np.mean(fold_accuracy)
     return cv_accuracy
+
 
 def norm_pdf(data, mu, sigma):
     """
@@ -238,14 +260,8 @@ def norm_pdf(data, mu, sigma):
  
     Returns the normal distribution pdf according to the given mu and sigma for the given x.    
     """
-    p = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    p = (np.exp(np.square((data - mu)) / (-2 * np.square(sigma)))) / (np.sqrt(2 * np.pi * np.square(sigma)))
+
     return p
 
 class EM(object):
@@ -276,44 +292,52 @@ class EM(object):
         self.weights = None
         self.mus = None
         self.sigmas = None
-        self.costs = None
+        self.costs = []
 
     # initial guesses for parameters
     def init_params(self, data):
         """
         Initialize distribution params
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        random_indices = np.random.permutation(data.shape[0])[:self.k]
+        self.mus = data[random_indices].reshape(self.k)
+
+        # Initialize standard deviations with random values
+        self.sigmas = np.random.uniform(low=0.5, high=1.5, size=self.k)
+
+        # Initialize weights equally
+        self.weights = np.full(self.k, 1 / self.k)
 
     def expectation(self, data):
         """
         E step - This function should calculate and update the responsibilities
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        probabilities = np.multiply(self.weights, norm_pdf(data, self.mus, self.sigmas))
+        normalization_factors = probabilities.sum(axis=1, keepdims=True)
+        self.responsibilities = np.divide(probabilities, normalization_factors)
 
     def maximization(self, data):
         """
         M step - This function should calculate and update the distribution params
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        # Calculate the distribution params accoording to the formula.
+        # Calculate the mean of the responsibilities across the data points for each Gaussian component
+        self.weights = np.mean(self.responsibilities, axis=0)
+        data_reshaped = data.reshape(-1, 1)
+        # Calculate the weighted sum of the data points for each Gaussian component
+        weighted_sum_data = self.responsibilities * data_reshaped
+        # Sum the weighted data points for each component and normalize by the sum of responsibilities
+        sum_weighted_data = np.sum(weighted_sum_data, axis=0)
+        sum_responsibilities = np.sum(self.responsibilities, axis=0)
+        self.mus = sum_weighted_data / sum_responsibilities
+        # Calculate the difference between the data points and the means
+        data_minus_mus = data_reshaped - self.mus
+        # Calculate the weighted squared differences
+        weighted_squared_diff = self.responsibilities * np.square(data_minus_mus)
+        # Calculate the mean of these weighted squared differences for each Gaussian component
+        variance = np.mean(weighted_squared_diff, axis=0)
+        # Calculate the standard deviations (sigmas) by taking the square root of the variances divided by the weights
+        self.sigmas = np.sqrt(variance / self.weights)
 
     def fit(self, data):
         """
@@ -324,13 +348,43 @@ class EM(object):
         Stop the function when the difference between the previous cost and the current is less than eps
         or when you reach n_iter.
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        # Initialize parameters
+        self.init_params(data)
+        self.costs.append(self.cost(data))
+
+        # Iterate to find the parameters for the distribution
+        for iteration in range(self.n_iter):
+            # Compute the current cost
+            current_cost = self.cost(data)
+            self.costs.append(current_cost)
+
+            # E-step: update responsibilities
+            self.expectation(data)
+
+            # M-step: update weights, means, and variances
+            self.maximization(data)
+
+            # Check for convergence
+            if len(self.costs) > 1:
+                cost_diff = self.costs[-1] - self.costs[-2]
+                if abs(cost_diff) < self.eps:
+                    break
+
+    def cost(self, data):
+        """
+        Calculate the cost (negative log-likelihood) of the data.
+        """
+        # Calculate the probability density function for each component
+        prob_density = self.weights * norm_pdf(data, self.mus, self.sigmas)
+
+        # Sum the probabilities for each data point
+        sum_prob_density = np.sum(prob_density, axis=1)
+
+        # Calculate the log-likelihood
+        log_likelihood = np.sum(np.log(sum_prob_density))
+
+        # Return the negative log-likelihood as the cost
+        return -log_likelihood
 
     def get_dist_params(self):
         return self.weights, self.mus, self.sigmas
@@ -350,13 +404,8 @@ def gmm_pdf(data, weights, mus, sigmas):
     for the given data.    
     """
     pdf = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # Calculate density function by formula sum of weight* density func for each gaussian i
+    pdf = np.sum(weights * norm_pdf(data.reshape(-1, 1), mus, sigmas), axis=1)
     return pdf
 
 class NaiveBayesGaussian(object):
@@ -388,13 +437,18 @@ class NaiveBayesGaussian(object):
         y : array-like, shape = [n_examples]
           Target values.
         """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        # Initialize priors and gmms dictionaries
+        # Fitting the data.
+        self.X = X
+        self.y = y
+        self.priors = {class_Label: len(y[y == class_Label]) / len(y) for class_Label in np.unique(y)}
+        self.gmms = {class_Label: {feature: EM(self.k) for feature in range(X.shape[1])} for class_Label in
+                     np.unique(y)}
+
+        for label in self.gmms.keys():
+            for feature in self.gmms[label].keys():
+                self.gmms[label][feature].fit(X[y == label][:, feature].reshape(-1, 1))
+
 
     def predict(self, X):
         """
@@ -403,14 +457,19 @@ class NaiveBayesGaussian(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-        preds = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        preds = []
+        for instance in X:
+            posteriors = []
+            for class_label in self.priors.keys():
+                likelihood = 1
+                for feature in range(len(instance)):
+                    weights, mus, sigmas = self.gmms[class_label][feature].get_dist_params()
+                    gmm = gmm_pdf(instance[feature], weights, mus, sigmas)
+                    likelihood *= gmm
+                posterior = self.priors[class_label] * likelihood
+                posteriors.append((posterior, class_label))
+            preds.append(max(posteriors, key=lambda t: t[0])[1])
+        preds = np.array(preds).reshape(-1,1)
         return preds
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
@@ -443,17 +502,49 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     bayes_train_acc = None
     bayes_test_acc = None
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # Fit Logistic Regression model
+    logistic_model = LogisticRegressionGD(eta=best_eta, eps=best_eps)
+    logistic_model.fit(x_train, y_train)
+    lor_train_preds = logistic_model.predict(x_train)
+    lor_test_preds = logistic_model.predict(x_test)
+    lor_train_acc = accuracy_score(y_train, lor_train_preds)
+    lor_test_acc = accuracy_score(y_test, lor_test_preds)
+
+    # Fit Naive Bayes model
+    naive_bayes_model = NaiveBayesGaussian(k=k)
+    naive_bayes_model.fit(x_train, y_train)
+    bayes_train_preds = naive_bayes_model.predict(x_train)
+    bayes_test_preds = naive_bayes_model.predict(x_test)
+    bayes_train_acc = accuracy_score(y_train, bayes_train_preds)
+    bayes_test_acc = accuracy_score(y_test, bayes_test_preds)
+
     return {'lor_train_acc': lor_train_acc,
             'lor_test_acc': lor_test_acc,
             'bayes_train_acc': bayes_train_acc,
             'bayes_test_acc': bayes_test_acc}
+
+def accuracy_score(y_true, y_pred):
+    """
+    Calculate accuracy given true labels and predicted labels.
+
+    Parameters
+    ----------
+    y_true : array-like
+        True labels.
+    y_pred : array-like
+        Predicted labels.
+
+    Returns
+    -------
+    float
+        Accuracy score.
+    """
+    correct = 0
+    total = len(y_true)
+    for true_label, pred_label in zip(y_true, y_pred):
+        if true_label == pred_label:
+            correct += 1
+    return correct / total
 
 def generate_datasets():
     from scipy.stats import multivariate_normal
