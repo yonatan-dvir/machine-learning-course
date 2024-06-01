@@ -1,3 +1,8 @@
+###### Your ID ######
+# ID1: 211337126
+# ID2: 204908933
+#####################
+
 import numpy as np
 
 class conditional_independence():
@@ -413,7 +418,7 @@ class DiscreteNBClassDistribution():
                 calc_likelihood = EPSILLON
             else:
                 calc_likelihood = (n_ij + 1) / (n_i + V_j)
-                
+
             likelihood *= calc_likelihood
         return likelihood
         
