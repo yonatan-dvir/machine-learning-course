@@ -14,13 +14,25 @@ def pearson_correlation( x, y):
     - The Pearson correlation coefficient between the two columns.    
     """
     r = 0.0
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+
+    # Calculate the mean of x and y
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+
+    # Calculate the deviations from the mean
+    x_deviation = x - x_mean
+    y_deviation = y - y_mean
+
+    # Calculate the products of deviations
+    sum_of_products = np.sum(x_deviation * y_deviation)
+
+    # Calculate the sum of squared deviations for x and y
+    x_squared_deviation = np.sum(x_deviation ** 2)
+    y_squared_deviation = np.sum(y_deviation ** 2)
+    
+    # Calculate the Pearson correlation
+    r = sum_of_products / np.sqrt(x_squared_deviation * y_squared_deviation)
+
     return r
 
 def feature_selection(X, y, n_features=5):
@@ -35,13 +47,21 @@ def feature_selection(X, y, n_features=5):
     - best_features: list of best features (names - list of strings).  
     """
     best_features = []
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    X["date"] = pd.to_numeric(pd.to_datetime(X["date"]))
+    correlations = []
+    for col_name in X.columns:
+      # print(col_name)
+      # print(X["date"].values)
+      # print(y.values)
+      # print(pearson_correlation(X["date"].values, y.values))
+      
+      correlation = pearson_correlation(X[col_name].values, y.values)
+      correlations.append((col_name, correlation))
+    
+    correlations.sort(key=lambda x: abs(x[1]), reverse=True)  # Sort by the highest absolute correlation
+    
+    best_features = [column for column, _ in correlations[:n_features]]
+    
     return best_features
 
 class LogisticRegressionGD(object):
@@ -75,7 +95,7 @@ class LogisticRegressionGD(object):
         self.thetas = []
 
     def fit(self, X, y):
-        """
+        """=-0978654321 xs
         Fit training data (the learning phase).
         Update the theta vector in each iteration using gradient descent.
         Store the theta vector in self.thetas.
